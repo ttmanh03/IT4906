@@ -42,8 +42,8 @@ class ClusterTSP_GA:
         self.avg_fitness_history = []
         
     def _extract_centers(self) -> List[Tuple[float, float, float]]:
-        """Trích xuất tọa độ center từ clusters"""
-        centers = []
+        """Trích xuất tọa độ center từ clusters và thêm điểm bắt đầu (0,0,0)"""
+        centers = [(0.0, 0.0, 0.0)]  # Điểm bắt đầu luôn là (0,0,0)
         for cluster_id in sorted(self.clusters.keys()):
             centers.append(self.clusters[cluster_id]["center"])
         return centers
@@ -82,36 +82,62 @@ class ClusterTSP_GA:
         return 1.0 / (distance + 1e-6)  # Tránh chia cho 0
     
     def create_individual(self) -> List[int]:
-        # Tạo 1 tour random
-        return list(np.random.permutation(self.n_clusters))
+        # Tạo 1 tour random, luôn bắt đầu từ điểm 0 (điểm bắt đầu)
+        remaining_points = list(range(1, self.n_clusters))  # Các điểm từ 1 đến n-1
+        np.random.shuffle(remaining_points)
+        return [0] + remaining_points  # Luôn bắt đầu từ điểm 0
     
     def create_population(self) -> List[List[int]]:
-        # Tạo quần thể ban đầu
+        # Tạo quần thể ban đầu - tất cả đều bắt đầu từ điểm 0
         population = []
         
-        # Một số cá thể được tạo bằng nearest neighbor heuristic
-        for start in range(min(5, self.n_clusters)):
-            nn_tour = self.nearest_neighbor_heuristic(start)
-            population.append(nn_tour)
+        # Một số cá thể được tạo bằng nearest neighbor heuristic (luôn bắt đầu từ 0)
+        nn_tour = self.nearest_neighbor_heuristic(0)  # Chỉ bắt đầu từ điểm 0
+        population.append(nn_tour)
         
-        # Phần còn lại random
+        # Tạo thêm một số biến thể của nearest neighbor
+        for _ in range(min(4, self.params['pop_size'])):
+            nn_variant = self.create_nn_variant()
+            population.append(nn_variant)
+        
+        # Phần còn lại random (nhưng luôn bắt đầu từ 0)
         while len(population) < self.params['pop_size']:
             population.append(self.create_individual())
             
         return population
     
     def nearest_neighbor_heuristic(self, start: int = 0) -> List[int]:
-        # Heuristic nearest neighbor
-        unvisited = set(range(self.n_clusters))
-        tour = [start]
-        unvisited.remove(start)
+        # Heuristic nearest neighbor - luôn bắt đầu từ điểm 0
+        unvisited = set(range(1, self.n_clusters))  # Chỉ xét các điểm từ 1 trở đi
+        tour = [0]  # Luôn bắt đầu từ điểm 0
         
-        current = start
+        current = 0
         while unvisited:
             nearest = min(unvisited, key=lambda x: self.distance_matrix[current][x])
             tour.append(nearest)
             unvisited.remove(nearest)
             current = nearest
+            
+        return tour
+    
+    def create_nn_variant(self) -> List[int]:
+        # Tạo biến thể nearest neighbor với một chút randomness
+        unvisited = set(range(1, self.n_clusters))
+        tour = [0]  # Luôn bắt đầu từ điểm 0
+        
+        current = 0
+        while unvisited:
+            # Chọn trong top 3 nearest neighbors (nếu có)
+            distances = [(x, self.distance_matrix[current][x]) for x in unvisited]
+            distances.sort(key=lambda x: x[1])
+            
+            # Chọn ngẫu nhiên trong top 3
+            top_candidates = distances[:min(3, len(distances))]
+            next_point = random.choice(top_candidates)[0]
+            
+            tour.append(next_point)
+            unvisited.remove(next_point)
+            current = next_point
             
         return tour
     
@@ -121,79 +147,116 @@ class ClusterTSP_GA:
         return max(tournament, key=self.fitness)
     
     def order_crossover(self, parent1: List[int], parent2: List[int]) -> Tuple[List[int], List[int]]:
-        # Order Crossover (OX)
+        # Order Crossover (OX) - chỉ áp dụng cho phần từ index 1 trở đi
         size = len(parent1)
         
-        # Chọn 2 điểm cắt ngẫu nhiên
-        start, end = sorted(random.sample(range(size), 2))
+        # Đảm bảo điểm 0 luôn ở đầu
+        if parent1[0] != 0 or parent2[0] != 0:
+            raise ValueError("Tour phải bắt đầu từ điểm 0")
+        
+        # Chỉ làm crossover với phần từ index 1 trở đi
+        sub_parent1 = parent1[1:]  # Bỏ điểm 0
+        sub_parent2 = parent2[1:]
+        sub_size = len(sub_parent1)
+        
+        if sub_size < 2:
+            return parent1.copy(), parent2.copy()
+        
+        # Chọn 2 điểm cắt ngẫu nhiên trong phần con
+        start, end = sorted(random.sample(range(sub_size), 2))
         
         # Tạo offspring 1
-        child1 = [-1] * size
-        child1[start:end] = parent1[start:end]
+        child1_sub = [-1] * sub_size
+        child1_sub[start:end] = sub_parent1[start:end]
         
         # Điền các phần tử còn lại từ parent2
         pointer = end
-        for city in parent2[end:] + parent2[:end]:
-            if city not in child1:
-                child1[pointer % size] = city
+        for city in sub_parent2[end:] + sub_parent2[:end]:
+            if city not in child1_sub:
+                child1_sub[pointer % sub_size] = city
                 pointer += 1
         
         # Tương tự cho offspring 2
-        child2 = [-1] * size
-        child2[start:end] = parent2[start:end]
+        child2_sub = [-1] * sub_size
+        child2_sub[start:end] = sub_parent2[start:end]
         
         pointer = end
-        for city in parent1[end:] + parent1[:end]:
-            if city not in child2:
-                child2[pointer % size] = city
+        for city in sub_parent1[end:] + sub_parent1[:end]:
+            if city not in child2_sub:
+                child2_sub[pointer % sub_size] = city
                 pointer += 1
+        
+        # Ghép lại với điểm 0 ở đầu
+        child1 = [0] + child1_sub
+        child2 = [0] + child2_sub
         
         return child1, child2
     
     def pmx_crossover(self, parent1: List[int], parent2: List[int]) -> Tuple[List[int], List[int]]:
-        # Lai tương hợp bộ phận
+        # PMX crossover - chỉ áp dụng cho phần từ index 1 trở đi
         size = len(parent1)
-        start, end = sorted(random.sample(range(size), 2))
         
-        child1 = [-1] * size
-        child2 = [-1] * size
+        # Đảm bảo điểm 0 luôn ở đầu
+        if parent1[0] != 0 or parent2[0] != 0:
+            raise ValueError("Tour phải bắt đầu từ điểm 0")
+        
+        # Chỉ làm crossover với phần từ index 1 trở đi
+        sub_parent1 = parent1[1:]
+        sub_parent2 = parent2[1:]
+        sub_size = len(sub_parent1)
+        
+        if sub_size < 2:
+            return parent1.copy(), parent2.copy()
+            
+        start, end = sorted(random.sample(range(sub_size), 2))
+        
+        child1_sub = [-1] * sub_size
+        child2_sub = [-1] * sub_size
         
         # Copy mapping sections
-        child1[start:end] = parent1[start:end]
-        child2[start:end] = parent2[start:end]
+        child1_sub[start:end] = sub_parent1[start:end]
+        child2_sub[start:end] = sub_parent2[start:end]
         
         # Create mapping dictionaries
-        mapping1 = {parent1[i]: parent2[i] for i in range(start, end)}
-        mapping2 = {parent2[i]: parent1[i] for i in range(start, end)}
+        mapping1 = {sub_parent1[i]: sub_parent2[i] for i in range(start, end)}
+        mapping2 = {sub_parent2[i]: sub_parent1[i] for i in range(start, end)}
         
         # Fill remaining positions
-        for i in list(range(start)) + list(range(end, size)):
+        for i in list(range(start)) + list(range(end, sub_size)):
             # For child1
-            val = parent2[i]
+            val = sub_parent2[i]
             while val in mapping1:
                 val = mapping1[val]
-            child1[i] = val
+            child1_sub[i] = val
             
             # For child2
-            val = parent1[i]
+            val = sub_parent1[i]
             while val in mapping2:
                 val = mapping2[val]
-            child2[i] = val
+            child2_sub[i] = val
+        
+        # Ghép lại với điểm 0 ở đầu
+        child1 = [0] + child1_sub
+        child2 = [0] + child2_sub
             
         return child1, child2
     
     def swap_mutation(self, individual: List[int]) -> List[int]:
-        # Đổi chỗ
+        # Đổi chỗ - chỉ áp dụng cho phần từ index 1 trở đi (bỏ qua điểm 0)
         mutated = individual.copy()
-        i, j = random.sample(range(len(mutated)), 2)
-        mutated[i], mutated[j] = mutated[j], mutated[i]
+        if len(mutated) > 2:  # Cần ít nhất 3 điểm (0 + 2 điểm khác)
+            available_indices = list(range(1, len(mutated)))  # Từ index 1 trở đi
+            i, j = random.sample(available_indices, 2)
+            mutated[i], mutated[j] = mutated[j], mutated[i]
         return mutated
     
     def inversion_mutation(self, individual: List[int]) -> List[int]:
-        # Đảo đoạn
+        # Đảo đoạn - chỉ áp dụng cho phần từ index 1 trở đi (bỏ qua điểm 0)
         mutated = individual.copy()
-        start, end = sorted(random.sample(range(len(mutated)), 2))
-        mutated[start:end+1] = reversed(mutated[start:end+1])
+        if len(mutated) > 2:  # Cần ít nhất 3 điểm
+            available_indices = list(range(1, len(mutated)))  # Từ index 1 trở đi
+            start, end = sorted(random.sample(available_indices, 2))
+            mutated[start:end+1] = reversed(mutated[start:end+1])
         return mutated
     
     def two_opt_local_search(self, tour: List[int]) -> List[int]:
@@ -238,16 +301,16 @@ class ClusterTSP_GA:
         start_time = time.time()
         
         for generation in range(self.params['generations']):
-            # Đánh giá fitness cho toàn bộ quần thể
+            # Đánh giá fitness toàn bộ quần thể
             fitness_scores = [self.fitness(ind) for ind in population]
             
-            # Lưu thống kê
+            # Lưu
             best_fitness = max(fitness_scores)
             avg_fitness = np.mean(fitness_scores)
             self.best_fitness_history.append(best_fitness)
             self.avg_fitness_history.append(avg_fitness)
             
-            # Tìm cá thể tốt nhất thế hệ này
+            # Tìm cá thể tốt nhất thế hệ
             gen_best = population[np.argmax(fitness_scores)]
             gen_best_distance = self.calculate_tour_distance(gen_best)
             
@@ -258,7 +321,7 @@ class ClusterTSP_GA:
                 if self.params['verbose'] and generation % 50 == 0:
                     print(f"Gen {generation}: New best distance = {best_distance:.3f}")
             
-            # Elitism - giữ lại k cá thể tốt nhất
+            # Giữ lại k cá thể tốt nhất
             elite_indices = np.argsort(fitness_scores)[-self.params['elitism_k']:]
             new_population = [population[i].copy() for i in elite_indices]
             
@@ -312,20 +375,26 @@ class ClusterTSP_GA:
     # Kết quả
     def print_solution(self, tour: List[int], distance: float):
         print("\n" + "="*50)
-        print("KẾT QUẢ TSP CHO CÁC CLUSTER CENTERS")
+        print("KẾT QUẢ TSP CHO CÁC CLUSTER CENTERS (với điểm bắt đầu tại gốc tọa độ)")
         print("="*50)
         print(f"Tổng khoảng cách tour: {distance:.3f}")
-        print(f"Số cluster centers: {len(tour)}")
-        print("\nThứ tự đi qua các clusters:")
+        print(f"Số điểm: {len(tour)} (bao gồm điểm bắt đầu (0,0,0))")
+        print("\nThứ tự đi qua các điểm:")
         
-        for i, cluster_idx in enumerate(tour):
-            center = self.cluster_centers[cluster_idx]
-            cluster_head = self.clusters[cluster_idx].get("cluster_head", "N/A")
-            print(f"{i+1}. Cluster {cluster_idx}: Center{center} (Head: {cluster_head})")
+        for i, point_idx in enumerate(tour):
+            center = self.cluster_centers[point_idx]
+            if point_idx == 0:
+                # Điểm bắt đầu (0,0,0)
+                print(f"{i+1}. ĐIỂM BẮT ĐẦU: Center{center}")
+            else:
+                # Cluster centers (index bị shift do thêm điểm (0,0,0))
+                original_cluster_id = list(self.clusters.keys())[point_idx - 1]
+                cluster_head = self.clusters[original_cluster_id].get("cluster_head", "N/A")
+                print(f"{i+1}. Cluster {original_cluster_id}: Center{center} (Head: {cluster_head})")
             
         # Quay về điểm đầu
         start_center = self.cluster_centers[tour[0]]
-        print(f"{len(tour)+1}. Quay về Cluster {tour[0]}: Center{start_center}")
+        print(f"{len(tour)+1}. Quay về ĐIỂM BẮT ĐẦU: Center{start_center}")
         
         print(f"\nChi tiết khoảng cách giữa các bước:")
         total_check = 0
@@ -374,8 +443,11 @@ class ClusterTSP_GA:
 # Chạy thử
 def main():
     
-    with open("l:\\Tính toán tiến hóa\\IT4906_Project\\IT4906\\output_data\\nodes_500.json", "r") as file:
+    with open("l:\\Tính toán tiến hóa\\IT4906_Project\\IT4906\\output_data_kmeans\\nodes_100.json", "r") as file:
         clusters = json.load(file)
+    
+    print(f"Đọc {len(clusters)} cluster centers từ file")
+    print("Tự động thêm điểm bắt đầu (0,0,0) vào index 0")
     
     # Param GA
     ga_params = {
@@ -390,7 +462,7 @@ def main():
         'verbose': True
     }
     
-    # Chạy GA
+    # Chạy GA (điểm bắt đầu (0,0,0) được tự động thêm trong class)
     tsp_ga = ClusterTSP_GA(clusters, ga_params)
     best_tour, best_distance = tsp_ga.evolve()
     
