@@ -374,7 +374,7 @@ class ClusterTSP_GA:
 # Chạy thử
 def main():
     
-    with open("l:\\Tính toán tiến hóa\\IT4906_Project\\IT4906\\output_data\\nodes_100.json", "r") as file:
+    with open("l:\\Tính toán tiến hóa\\IT4906_Project\\IT4906\\output_data\\nodes_500.json", "r") as file:
         clusters = json.load(file)
     
     # Param GA
