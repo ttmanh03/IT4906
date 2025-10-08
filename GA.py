@@ -447,7 +447,6 @@ def main():
         clusters = json.load(file)
     
     print(f"Đọc {len(clusters)} cluster centers từ file")
-    print("Tự động thêm điểm bắt đầu (0,0,0) vào index 0")
     
     # Param GA
     ga_params = {
@@ -469,7 +468,7 @@ def main():
     # In kết quả
     tsp_ga.print_solution(best_tour, best_distance)
     
-    # Vẽ biểu đồ evolution
+    # Vẽ biểu đồ
     tsp_ga.plot_evolution()
     
     return tsp_ga, best_tour, best_distance
