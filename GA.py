@@ -121,7 +121,7 @@ class ClusterTSP_GA:
         return tour
     
     def create_nn_variant(self) -> List[int]:
-        # Tạo biến thể nearest neighbor với một chút randomness
+        # Tạo biến thể nearest neighbor với random
         unvisited = set(range(1, self.n_clusters))
         tour = [0]  # Luôn bắt đầu từ điểm 0
         
