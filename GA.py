@@ -142,7 +142,6 @@ class ClusterTSP_GA:
         return tour
     
     def tournament_selection(self, population: List[List[int]]) -> List[int]:
-        """Tournament selection"""
         tournament = random.sample(population, self.params['tournament_size'])
         return max(tournament, key=self.fitness)
     
