@@ -442,7 +442,7 @@ class ClusterTSP_GA:
 # Chạy thử
 def main():
     
-    with open("l:\\Tính toán tiến hóa\\IT4906_Project\\IT4906\\output_data_kmeans\\nodes_100.json", "r") as file:
+    with open("l:\\Tính toán tiến hóa\\IT4906_Project\\IT4906\\output_data_kmeans\\nodes_200.json", "r") as file:
         clusters = json.load(file)
     
     print(f"Đọc {len(clusters)} cluster centers từ file")
