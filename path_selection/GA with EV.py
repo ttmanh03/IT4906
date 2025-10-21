@@ -311,8 +311,44 @@ class ClusterTSP_GA:
         plt.tight_layout()
         plt.show()
 
+
+# --- TÍNH NĂNG LƯỢNG (copy từ PSO with EV) ---
+def compute_energy(best_time, G=100, L=1024, n=4,
+                   P_t=1.6e-3, P_r=0.8e-3, P_idle=0.1e-3,
+                   DR=4000, DR_i=1e6):
+    """Tính năng lượng tiêu thụ cho Member Node và Target Node"""
+    # --- Member Node ---
+    E_tx_MN = G * P_t * L / DR
+    E_idle_MN = (best_time - G * L / DR) * P_idle
+    E_total_MN = E_tx_MN + E_idle_MN
+
+    # --- Target Node ---
+    E_rx_TN = G * P_r * L * n / DR
+    E_tx_TN = G * P_t * L * n / DR_i
+    E_idle_TN = (best_time - (G * L * n / DR) - (G * L * n / DR_i)) * P_idle
+    E_total_TN = E_rx_TN + E_tx_TN + E_idle_TN
+
+    return {
+        "Member": {"E_tx": E_tx_MN, "E_idle": E_idle_MN, "E_total": E_total_MN},
+        "Target": {"E_rx": E_rx_TN, "E_tx": E_tx_TN, "E_idle": E_idle_TN, "E_total": E_total_TN}
+    }
+
+
+# VẼ ĐƯỜNG ĐI 3D (copy from PSO with EV)
+def plot_path_3d(coords, path, title="Best path"):
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(111, projection="3d")
+    path_coords = np.array([coords[i] for i in path] + [coords[path[0]]])
+    ax.plot(path_coords[:, 0], path_coords[:, 1], path_coords[:, 2], "-o")
+    coords_arr = np.array(coords)
+    ax.scatter(coords_arr[:, 0], coords_arr[:, 1], coords_arr[:, 2], c="red", s=50)
+    for i, (x, y, z) in enumerate(coords_arr):
+        ax.text(x, y, z, str(i))
+    ax.set_title(title)
+    plt.show()
+
 def main():
-    path = "l:\\Tính toán tiến hóa\\IT4906_Project\\IT4906\\output_data_kmeans\\nodes_200.json"
+    path = "l:\\Tính toán tiến hóa\\IT4906_Project\\IT4906\\output_data_kmeans\\nodes_100.json"
     with open(path, 'r') as f:
         clusters = json.load(f)
 
@@ -321,13 +357,13 @@ def main():
 
     ga_params = {
         'pop_size': 40,
-        'generations': 150,
+        'generations': 50,
         'crossover_rate': 0.8,
         'mutation_rate': 0.2,
         'elitism_k': 3,
         'local_search': True,
-        'v_f': 0.3,
-        'v_AUV': 1.0,
+        'v_f': 1.2,
+        'v_AUV': 3.0,
         'verbose': True
     }
 
@@ -345,6 +381,17 @@ def main():
 
     ga.print_solution(best, best_time)
     ga.plot_evolution()
+
+    # --- TÍNH NĂNG LƯỢNG (in giống PSO with EV) ---
+    energy = compute_energy(best_time)
+    print("\n=== Năng lượng tiêu thụ ===")
+    for k, v in energy.items():
+        print(f"{k}:")
+        for name, val in v.items():
+            print(f"   {name} = {val:.6f} J")
+
+    # Vẽ đường đi 3D (sử dụng cluster_centers)
+    plot_path_3d(ga.cluster_centers, best, title=f"GA - Min Time ({best_time:.2f}s)")
 
 
 if __name__ == '__main__':
