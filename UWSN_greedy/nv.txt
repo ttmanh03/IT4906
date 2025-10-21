@@ -1,0 +1,5 @@
+1. Giải thích công thức vận tốc kia
+2. Tính được công thức chọn CH dựa trên năng lượng. (có thể xem xét sort E các node)
+3. Tính thời gian AUV trao đổi data tại CH
+4. Trong 3 tt PSO, GA, tham lam: Các member nodes truyền data về CH thế nào để ko ảnh hưởng mạng 
+5. Chạy 3tt trên 1 bộ dữ liệu để so sánh tgian chạy, kết quả, độ lệch chuẩn. Vẽ biểu đồ

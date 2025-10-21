@@ -47,6 +47,6 @@ def choose_cluster_head(cluster, energies, alpha=0.5):
     # Hàm mục tiêu
     f_score = alpha * (1 - norm_e) + (1 - alpha) * norm_d
     ch_index = np.argmin(f_score)
-    cluster_head = node_ids[ch_index] #chọn node thỏa mãn làm tâm cụm
+    cluster_head = node_ids[ch_index] # chọn node thỏa mãn làm tâm cụm
     return cluster_head
  
