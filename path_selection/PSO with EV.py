@@ -184,7 +184,8 @@ def plot_path_3d(coords, path, title="Best path"):
 
 # TEST
 if __name__ == "__main__":
-    with open("/kaggle/input/inputdata-test/nodes_100.json", "r") as f:
+    path = "l:\\Tính toán tiến hóa\\IT4906_Project\\IT4906\\output_data_kmeans\\nodes_200.json"
+    with open(path, 'r') as f:
         nodes_data = json.load(f)
     coords = np.array([cluster["center"] for cluster in nodes_data.values()])
 

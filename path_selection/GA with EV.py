@@ -37,14 +37,25 @@ def travel_time(path, coords, v_f, v_AUV):
     for i in range(len(path) - 1):
         p1 = coords[path[i]]
         p2 = coords[path[i + 1]]
-        d = np.linalg.norm(p2 - p1)
-        v_s = compute_vs(p1, p2, v_f, v_AUV)
-        total_time += d / v_s
+        p1_arr = np.array(p1)
+        p2_arr = np.array(p2)
+        d = np.linalg.norm(p2_arr - p1_arr)
+        v_s = compute_vs(tuple(p1_arr.tolist()), tuple(p2_arr.tolist()), v_f, v_AUV)
+        if v_s <= 1e-9:
+            # avoid division by zero; treat as very large time
+            total_time += float('inf')
+        else:
+            total_time += d / v_s
     p1 = coords[path[-1]]
     p2 = coords[path[0]]
-    d = np.linalg.norm(p2 - p1)
-    v_s = compute_vs(p1, p2, v_f, v_AUV)
-    total_time += d / v_s
+    p1_arr = np.array(p1)
+    p2_arr = np.array(p2)
+    d = np.linalg.norm(p2_arr - p1_arr)
+    v_s = compute_vs(tuple(p1_arr.tolist()), tuple(p2_arr.tolist()), v_f, v_AUV)
+    if v_s <= 1e-9:
+        total_time += float('inf')
+    else:
+        total_time += d / v_s
     return total_time
 
 
@@ -300,13 +311,13 @@ class ClusterTSP_GA:
         plt.tight_layout()
         plt.show()
 
-
-# runner example
 def main():
-    # load clusters file (mẫu)
     path = "l:\\Tính toán tiến hóa\\IT4906_Project\\IT4906\\output_data_kmeans\\nodes_200.json"
     with open(path, 'r') as f:
         clusters = json.load(f)
+
+    # In ra thông tin giống PSO with EV
+    print(f"Đã đọc {len(clusters)} clusters từ file JSON.")
 
     ga_params = {
         'pop_size': 40,
@@ -320,8 +331,18 @@ def main():
         'verbose': True
     }
 
+    # In ra các tham số GA (giống style PSO with EV)
+    print("\n=== GA parameters ===")
+    for k, v in ga_params.items():
+        print(f"  {k}: {v}")
+
     ga = ClusterTSP_GA(clusters, ga_params)
     best, best_time = ga.evolve()
+
+    # In kết quả cuối giống PSO
+    print("\nFinal best path:", best)
+    print(f"Final best total travel time: {best_time:.4f}s")
+
     ga.print_solution(best, best_time)
     ga.plot_evolution()
 
