@@ -348,7 +348,7 @@ def plot_path_3d(coords, path, title="Best path"):
     plt.show()
 
 def main():
-    path = "l:\\Tính toán tiến hóa\\IT4906_Project\\IT4906\\output_data_kmeans\\nodes_100.json"
+    path = "l:\\Tính toán tiến hóa\\IT4906_Project\\IT4906\\output_data_kmeans\\nodes_20.json"
     with open(path, 'r') as f:
         clusters = json.load(f)
 
@@ -357,7 +357,7 @@ def main():
 
     ga_params = {
         'pop_size': 40,
-        'generations': 50,
+        'generations': 200,
         'crossover_rate': 0.8,
         'mutation_rate': 0.2,
         'elitism_k': 3,
