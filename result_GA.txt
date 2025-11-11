@@ -1,8 +1,0 @@
-20nodes: 390.174
-100nodes: 904.961
-200nodes: 1330.993
-
-#With new k_means
-20nodes: 407,128
-100nodes: 664.885
-200nodes: 849.193
