@@ -63,6 +63,10 @@ class Clustering:
         """
         Chia nhỏ cụm không hợp lệ thành các cụm con
         """
+        # Nếu cụm chỉ có 1 node, không thể chia
+        if len(cluster_nodes) < 2:
+            return [(cluster_nodes, cluster_ids)]
+        
         # Sử dụng K-Means để chia 2
         kmeans = KMeans(n_clusters=2, n_init=20, random_state=42)
         labels = kmeans.fit_predict(cluster_nodes)
