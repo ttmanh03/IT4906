@@ -1,0 +1,29 @@
+
+-- GA --
+Files: 9 | Node range: 150 - 550
+Mean final_best_time: 711.0896
+Mean cycles_completed: 811.7778
+Mean death_rate: 0.1924
+Mean avg_dead_per_cycle: 0.0861
+Mean reoptimization_count: 2.7778
+Mean recluster_events: 2.7778
+
+-- PSO --
+Files: 9 | Node range: 150 - 550
+Mean final_best_time: 756.2283
+Mean cycles_completed: 736.0000
+Mean death_rate: 0.2286
+Mean avg_dead_per_cycle: 0.1205
+Mean reoptimization_count: 2.1111
+Mean recluster_events: 2.1111
+
+Best method per node (min final_best_time):
+  Nodes 150: GA (734.754s)
+  Nodes 200: GA (744.572s)
+  Nodes 250: PSO (729.266s)
+  Nodes 300: GA (720.539s)
+  Nodes 350: GA (693.773s)
+  Nodes 400: GA (679.579s)
+  Nodes 450: GA (690.124s)
+  Nodes 500: GA (685.459s)
+  Nodes 550: GA (695.633s)
