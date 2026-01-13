@@ -69,11 +69,22 @@ project/
 │
 ├── kaggle/
 │   └── clustering.py                     # Module phân cụm
-│
-|
-│   
-│   
-│
+|   |__ algorthms                         # Module thuật toán định tuyến
+|   |     |__ga.py
+│   |     |__greedy.py
+|   |     |__pso.py
+│   |___compare_routing.py                # Script so sánh kết quả hội tụ giữa các thuật toán
+│   |___compute.py                        # Module tính toán thời gian, năng lượng
+│   |___simulate_routing.py               # Script chạy mô phỏng các bước phân cụm, định      |   |                                     # tuyến cho AUV di chuyển thu thập dữ liệu trong    |   |                                     # mạng
+|   |___output
+|       |___draw_hoitu
+|       |    |____draw_output              # lưu ảnh biểu đồ so sánh độ hội tụ
+|       |    |____nodes_150                # Chứa file json ghi lại kết quả định tuyến các lần
+|       |     ...                          # lặp của từng thuật toán trên 10 bộ dữ liệu
+|       |    |____draw_chart_hoitu.ipynb   # Vẽ biểu đồ và lưu vào draw_hoitu
+|       |___results_routing                # Kết quả mô phỏng AUV thu thập trong mạng tới khi
+|                                          # mạng sập
+|            
 ├── create_input.ipynb                    # Notebook tạo dữ liệu
 ├── visualize_clustering.py               # Script phân cụm & vẽ
 ├── visualize_results.py                  # Script phân tích kết quả
