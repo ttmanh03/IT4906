@@ -70,9 +70,9 @@ project/
 ├── kaggle/
 │   └── clustering.py                     # Module phân cụm
 │
-├── result_ga_ch_most_energy/             # Kết quả mô phỏng
-│   ├── result_nodes_150_1.json
-│   └── ...
+|
+│   
+│   
 │
 ├── create_input.ipynb                    # Notebook tạo dữ liệu
 ├── visualize_clustering.py               # Script phân cụm & vẽ
@@ -100,8 +100,8 @@ Pillow >= 8.0.0
 
 ### Bước 1: Clone repository
 ```bash
-git clone https://github.com/your-username/uwsn-simulator.git
-cd uwsn-simulator
+git clone https://github.com/ttmanh03/IT4906.git
+cd IT4906
 ```
 
 ### Bước 2: Tạo môi trường ảo (khuyến nghị)
@@ -125,7 +125,6 @@ pip install numpy matplotlib scikit-learn scipy mplcursors Pillow
 mkdir -p data/input_data_evenly_distributed
 mkdir -p data/output_data_kmeans
 mkdir -p data/draw_output_kmeans
-mkdir -p result_ga_ch_most_energy
 ```
 
 ## 📖 Hướng dẫn sử dụng
@@ -239,6 +238,8 @@ min_cluster_size = 5    # Số nodes tối thiểu trong 1 cụm
 ```
 
 ## 📊 Kết quả
+### So sánh mức độ hiệu quả giữa các thuật toán
+  - Tuổi thọ mạng là tiêu chí quan trọng nhất để đánh giá và qua đó, ta thấy: GA > PSO > Greedy
 
 ### Ví dụ kết quả visualization
 
