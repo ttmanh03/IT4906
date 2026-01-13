@@ -12,7 +12,7 @@ Dự án mô phỏng và tối ưu hóa tuổi thọ mạng cảm biến dưới
 - [Hướng dẫn sử dụng](#hướng-dẫn-sử-dụng)
 - [Tham số cấu hình](#tham-số-cấu-hình)
 - [Kết quả](#kết-quả)
-- [Tác giả](#tác-giả)
+
 
 ## 🎯 Giới thiệu
 
@@ -230,9 +230,9 @@ min_cluster_size = 5    # Số nodes tối thiểu trong 1 cụm
 {
     "input_file": "nodes_150_1.json",
     "initial_total_nodes": 150,
-    "cycles_completed": 1245,
-    "final_alive_nodes": 135,
-    "final_alive_ratio": 0.9,
+    "cycles_completed": 1239,
+    "final_alive_nodes": 27,
+    "final_alive_ratio": 0.1,
     "timestamp": "2025-01-13 14:30:25"
 }
 ```
