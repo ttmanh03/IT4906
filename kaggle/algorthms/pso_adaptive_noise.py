@@ -6,9 +6,10 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from compute import Computing
 
 
-class Pso_routing:
+class Pso_adaptive_noise:
     """
-    Class chứa thuật toán PSO cơ bản để tối ưu hóa routing cho TSP 3D
+    Class chứa thuật toán PSO với Adaptive Noise để tối ưu hóa routing cho TSP 3D
+    Tự động điều chỉnh noise khi bị stuck để tăng khả năng exploration
     """
     
     @staticmethod
@@ -56,11 +57,11 @@ class Pso_routing:
         return pos
     
     @staticmethod
-    def pso_tsp_3d_time(coords, v_f=1.0, v_AUV=3.0,
-                        n_particles=40, max_iter=200,
-                        w=0.5, c1=0.25, c2=0.25, init_gbest=None, verbose=True):
+    def pso_tsp_3d_time_adaptive(coords, v_f=1.0, v_AUV=3.0,
+                                 n_particles=40, max_iter=200,
+                                 w=0.5, c1=0.25, c2=0.25, init_gbest=None, verbose=True):
         """
-        PSO cơ bản cho TSP 3D với tối ưu hóa thời gian
+        PSO với Adaptive Noise - tự động điều chỉnh noise khi bị stuck
         
         Args:
             coords: array - tọa độ các điểm (n x 3)
@@ -102,6 +103,13 @@ class Pso_routing:
             gbest = pbest[best_idx].copy()
             gbest_cost = pbest_cost[best_idx]
         
+        # ================= ADAPTIVE NOISE SETUP =================
+        no_improve = 0
+        last_best = gbest_cost
+        p_noise = 0.1
+        max_noise_swaps = 2
+        # =======================================================
+        
         # --- Vòng lặp chính ---
         for t in range(max_iter):
             inertia = 0.7 - 0.5 * (t / max_iter)  # Giảm dần inertia
@@ -114,18 +122,26 @@ class Pso_routing:
                 
                 # Ảnh hưởng cá nhân (pbest)
                 if random.random() < c1:
-                    seq_pb = Pso_routing.get_swap_sequence(xi, pbest[i])
+                    seq_pb = Pso_adaptive_noise.get_swap_sequence(xi, pbest[i])
                     if seq_pb:
-                        v_new += random.sample(seq_pb, min(2, len(seq_pb)))  # Thêm 2 swap ngẫu nhiên
+                        v_new += random.sample(seq_pb, min(2, len(seq_pb)))
                 
                 # Ảnh hưởng toàn cục (gbest)
                 if random.random() < c2:
-                    seq_gb = Pso_routing.get_swap_sequence(xi, gbest)
+                    seq_gb = Pso_adaptive_noise.get_swap_sequence(xi, gbest)
                     if seq_gb:
-                        v_new += random.sample(seq_gb, min(2, len(seq_gb)))  # Thêm 2 swap ngẫu nhiên
+                        v_new += random.sample(seq_gb, min(2, len(seq_gb)))
                 
-                # Cập nhật vị trí và vận tốc
-                new_x = Pso_routing.apply_velocity(xi, v_new)
+                # ================= ADAPTIVE NOISE =================
+                if random.random() < p_noise:
+                    k = random.randint(1, max_noise_swaps)
+                    for _ in range(k):
+                        i1, i2 = random.sample(range(1, n_cities), 2)
+                        v_new.append((i1, i2))
+                # =================================================
+                
+                # Cập nhật vị trí
+                new_x = Pso_adaptive_noise.apply_velocity(xi, v_new)
                 new_cost = Computing.travel_time(np.array(new_x), coords, v_f, v_AUV)
                 
                 swarm[i], velocities[i] = new_x, v_new
@@ -136,18 +152,31 @@ class Pso_routing:
                     if new_cost < gbest_cost:
                         gbest, gbest_cost = new_x, new_cost
             
+            # ============ ADAPTIVE NOISE UPDATE ============
+            if gbest_cost >= last_best - 1e-6:
+                no_improve += 1
+            else:
+                no_improve = 0
+                last_best = gbest_cost
+            
+            if no_improve > 15:
+                p_noise = min(0.4, p_noise * 1.3)
+            else:
+                p_noise = max(0.05, p_noise * 0.95)
+            # ===============================================
+            
             if verbose and t % 50 == 0:
-                print(f"    [PSO Iter {t:3d}]: Best time = {gbest_cost:.4f}")
+                print(f"    [PSO-Adaptive Iter {t:3d}]: Best time = {gbest_cost:.4f}, Noise = {p_noise:.3f}")
         
         if verbose:
-            print(f"    [PSO Iter {max_iter:3d}]: Final Best time = {gbest_cost:.4f}")
+            print(f"    [PSO-Adaptive Iter {max_iter:3d}]: Final Best time = {gbest_cost:.4f}")
         
         return gbest, gbest_cost
     
     @staticmethod
     def multi_pso_tsp(coords, v_f=1.2, v_AUV=3.0, n_outer=5, verbose=True, **kwargs):
         """
-        Chạy PSO cơ bản nhiều lần để cải thiện hội tụ
+        Chạy PSO với Adaptive Noise nhiều lần để cải thiện hội tụ
         
         Args:
             coords: array - tọa độ các điểm
@@ -164,9 +193,9 @@ class Pso_routing:
         
         for outer in range(1, n_outer + 1):
             if verbose:
-                print(f"   [PSO Outer loop {outer}/{n_outer}]")
+                print(f"   [PSO-Adaptive Outer loop {outer}/{n_outer}]")
             
-            gbest, cost = Pso_routing.pso_tsp_3d_time(
+            gbest, cost = Pso_adaptive_noise.pso_tsp_3d_time_adaptive(
                 coords, v_f=v_f, v_AUV=v_AUV,
                 init_gbest=prev_gbest, verbose=verbose, **kwargs
             )

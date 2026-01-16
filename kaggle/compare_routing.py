@@ -13,6 +13,8 @@ from clustering import Clustering
 from algorthms.greedy import Greedy
 from algorthms.ga import ClusterTSP_GA
 from algorthms.pso import Pso_routing
+from algorthms.pso_adaptive_noise import Pso_adaptive_noise
+from algorthms.pso_levy_flight import Pso_levy_flight
 
 def compare_routing_boxplot():
     """
@@ -163,7 +165,7 @@ def compare_routing_boxplot():
             # 3. PSOver2
             print(f"  🔄 Chạy PSOver2 (5 lần)...", end=' ')
             for run in range(N_RUNS):
-                path_pso2, cost_pso2 = Pso_routing.multi_pso_tsp_ver2(
+                path_pso2, cost_pso2 = Pso_adaptive_noise.multi_pso_tsp(
                     center_coords, 
                     v_f=v_f, 
                     v_AUV=v_AUV, 
@@ -178,7 +180,7 @@ def compare_routing_boxplot():
             # 4. PSOver3
             print(f"  🔄 Chạy PSOver3 (5 lần)...", end=' ')
             for run in range(N_RUNS):
-                path_pso3, cost_pso3 = Pso_routing.multi_pso_tsp_ver3(
+                path_pso3, cost_pso3 = Pso_levy_flight.multi_pso_tsp(
                     center_coords, 
                     v_f=v_f, 
                     v_AUV=v_AUV, 

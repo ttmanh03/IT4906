@@ -14,6 +14,9 @@ from clustering import Clustering
 from algorthms.greedy import Greedy
 from algorthms.ga import ClusterTSP_GA
 from algorthms.pso import Pso_routing
+from algorthms.pso_adaptive_noise import Pso_adaptive_noise
+from algorthms.pso_levy_flight import Pso_levy_flight
+
 
 def main():
     """

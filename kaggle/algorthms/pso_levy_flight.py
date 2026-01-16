@@ -6,9 +6,10 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from compute import Computing
 
 
-class Pso_routing:
+class Pso_levy_flight:
     """
-    Class chứa thuật toán PSO cơ bản để tối ưu hóa routing cho TSP 3D
+    Class chứa thuật toán PSO với Lévy Flight để tối ưu hóa routing cho TSP 3D
+    Thêm bước nhảy Lévy để tăng khả năng exploration
     """
     
     @staticmethod
@@ -56,11 +57,11 @@ class Pso_routing:
         return pos
     
     @staticmethod
-    def pso_tsp_3d_time(coords, v_f=1.0, v_AUV=3.0,
-                        n_particles=40, max_iter=200,
-                        w=0.5, c1=0.25, c2=0.25, init_gbest=None, verbose=True):
+    def pso_tsp_3d_time_levy(coords, v_f=1.0, v_AUV=3.0,
+                             n_particles=40, max_iter=200,
+                             w=0.5, c1=0.25, c2=0.25, init_gbest=None, verbose=True):
         """
-        PSO cơ bản cho TSP 3D với tối ưu hóa thời gian
+        PSO với Lévy Flight - thêm bước nhảy Lévy để tăng khả năng exploration
         
         Args:
             coords: array - tọa độ các điểm (n x 3)
@@ -81,73 +82,111 @@ class Pso_routing:
         if n_cities < 2:
             return [0], 0.0
         if n_cities == 2:
-            return [0, 1], Computing.travel_time(np.array([0, 1]), coords, v_f, v_AUV)
+            path = np.array([0, 1], dtype=np.int64)
+            return path.tolist(), Computing.travel_time(path, coords, v_f, v_AUV)
         
         cities = list(range(1, n_cities))
-        # Khởi tạo quần thể
+        
+        # -------- init swarm --------
         swarm = [[0] + random.sample(cities, len(cities)) for _ in range(n_particles)]
         velocities = [[] for _ in range(n_particles)]
         
-        # Đánh giá ban đầu
-        costs = [Computing.travel_time(np.array(p), coords, v_f, v_AUV) for p in swarm]
         pbest = [p.copy() for p in swarm]
-        pbest_cost = costs.copy()
+        pbest_cost = []
+        for p in swarm:
+            p_arr = np.array(p, dtype=np.int64)
+            pbest_cost.append(Computing.travel_time(p_arr, coords, v_f, v_AUV))
         
-        # Xác định gbest
+        # -------- gbest --------
         if init_gbest is not None and len(init_gbest) == n_cities:
-            gbest = init_gbest.copy()
-            gbest_cost = Computing.travel_time(np.array(gbest), coords, v_f, v_AUV)
+            gbest = list(init_gbest)
+            gbest_cost = Computing.travel_time(np.array(gbest, np.int64), coords, v_f, v_AUV)
         else:
-            best_idx = int(np.argmin(pbest_cost))
-            gbest = pbest[best_idx].copy()
-            gbest_cost = pbest_cost[best_idx]
+            idx = int(np.argmin(pbest_cost))
+            gbest = pbest[idx].copy()
+            gbest_cost = pbest_cost[idx]
         
-        # --- Vòng lặp chính ---
+        # -------- Lévy params --------
+        p_levy = 0.15
+        beta = 1.5
+        max_levy_swaps = 4
+        max_velocity_len = n_cities
+        
+        # --------------------------------
         for t in range(max_iter):
-            inertia = 0.7 - 0.5 * (t / max_iter)  # Giảm dần inertia
+            inertia = 0.7 - 0.5 * (t / max_iter)
             
             for i in range(n_particles):
-                xi, vi = swarm[i], velocities[i]
+                xi = swarm[i]
+                vi = velocities[i]
                 
-                # Giữ lại 1 phần vận tốc cũ
-                v_new = vi[:int(inertia * len(vi))]
+                # ----- inertia -----
+                keep = int(inertia * len(vi))
+                v_new = vi[:keep]
                 
-                # Ảnh hưởng cá nhân (pbest)
+                # ----- pbest -----
                 if random.random() < c1:
-                    seq_pb = Pso_routing.get_swap_sequence(xi, pbest[i])
+                    seq_pb = Pso_levy_flight.get_swap_sequence(xi, pbest[i])
                     if seq_pb:
-                        v_new += random.sample(seq_pb, min(2, len(seq_pb)))  # Thêm 2 swap ngẫu nhiên
+                        v_new += random.sample(seq_pb, min(2, len(seq_pb)))
                 
-                # Ảnh hưởng toàn cục (gbest)
+                # ----- gbest -----
                 if random.random() < c2:
-                    seq_gb = Pso_routing.get_swap_sequence(xi, gbest)
+                    seq_gb = Pso_levy_flight.get_swap_sequence(xi, gbest)
                     if seq_gb:
-                        v_new += random.sample(seq_gb, min(2, len(seq_gb)))  # Thêm 2 swap ngẫu nhiên
+                        v_new += random.sample(seq_gb, min(2, len(seq_gb)))
                 
-                # Cập nhật vị trí và vận tốc
-                new_x = Pso_routing.apply_velocity(xi, v_new)
-                new_cost = Computing.travel_time(np.array(new_x), coords, v_f, v_AUV)
+                # ----- Lévy flight -----
+                if random.random() < p_levy:
+                    u = random.gauss(0.0, 1.0)
+                    v = random.gauss(0.0, 1.0)
+                    step = abs(u) / (abs(v) ** (1.0 / beta))
+                    k = min(max_levy_swaps, max(1, int(step)))
+                    for _ in range(k):
+                        a, b = random.sample(range(1, n_cities), 2)
+                        v_new.append((a, b))
                 
-                swarm[i], velocities[i] = new_x, v_new
+                # ⛔ CHỐNG velocity rác
+                if len(v_new) > max_velocity_len:
+                    v_new = random.sample(v_new, max_velocity_len)
                 
-                # Cập nhật pbest và gbest
+                # ----- apply -----
+                new_x = Pso_levy_flight.apply_velocity(xi, v_new)
+                
+                # ⛔ SAFETY CHECK (QUAN TRỌNG)
+                if new_x is None or len(new_x) != n_cities:
+                    continue  # rollback particle
+                
+                # ✅ KIỂM TRA TÍNH HỢP LỆ CỦA PATH
+                if len(set(new_x)) != n_cities or new_x[0] != 0:
+                    continue  # Path không hợp lệ
+                
+                new_x_arr = np.array(new_x, dtype=np.int64)
+                new_cost = Computing.travel_time(new_x_arr, coords, v_f, v_AUV)
+                
+                swarm[i] = new_x
+                velocities[i] = v_new
+                
                 if new_cost < pbest_cost[i]:
-                    pbest[i], pbest_cost[i] = new_x, new_cost
+                    pbest[i] = new_x.copy()
+                    pbest_cost[i] = new_cost
+                    
                     if new_cost < gbest_cost:
-                        gbest, gbest_cost = new_x, new_cost
+                        gbest = new_x.copy()
+                        gbest_cost = new_cost
             
             if verbose and t % 50 == 0:
-                print(f"    [PSO Iter {t:3d}]: Best time = {gbest_cost:.4f}")
+                print(f"    [PSO-Levy Iter {t:3d}]: Best time = {gbest_cost:.4f}")
         
         if verbose:
-            print(f"    [PSO Iter {max_iter:3d}]: Final Best time = {gbest_cost:.4f}")
+            print(f"    [PSO-Levy Iter {max_iter:3d}]: Final Best time = {gbest_cost:.4f}")
         
         return gbest, gbest_cost
     
     @staticmethod
     def multi_pso_tsp(coords, v_f=1.2, v_AUV=3.0, n_outer=5, verbose=True, **kwargs):
         """
-        Chạy PSO cơ bản nhiều lần để cải thiện hội tụ
+        Chạy PSO với Lévy Flight nhiều lần để cải thiện hội tụ
         
         Args:
             coords: array - tọa độ các điểm
@@ -164,9 +203,9 @@ class Pso_routing:
         
         for outer in range(1, n_outer + 1):
             if verbose:
-                print(f"   [PSO Outer loop {outer}/{n_outer}]")
+                print(f"   [PSO-Levy Outer loop {outer}/{n_outer}]")
             
-            gbest, cost = Pso_routing.pso_tsp_3d_time(
+            gbest, cost = Pso_levy_flight.pso_tsp_3d_time_levy(
                 coords, v_f=v_f, v_AUV=v_AUV,
                 init_gbest=prev_gbest, verbose=verbose, **kwargs
             )
