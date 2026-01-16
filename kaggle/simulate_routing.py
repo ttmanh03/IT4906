@@ -162,7 +162,7 @@ def main():
                 
                 # Cập nhật năng lượng
                 energy_before = sum(all_nodes[n]['residual_energy'] for n in all_nodes)
-                Computing.update_energy(all_nodes, clusters, current_time)
+                Computing.update_energy(all_nodes, node_positions, clusters, current_time)
                 energy_after = sum(all_nodes[n]['residual_energy'] for n in all_nodes)
                 total_energy_consumed += (energy_before - energy_after)
                 
